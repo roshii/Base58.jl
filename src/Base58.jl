@@ -1,9 +1,12 @@
 __precompile__()
 
 module Base58
-export base58encode, base58decode, base58checkencode, base58checkdecode
-
+export base58encode, base58decode, base58checkencode, base58checkdecode,
+       alt_base58encode, alt_base58decode, alt_base58checkencode
+using BenchmarkTools
 import SHA: sha256
+
+include("alt_Base58.jl")
 
 if VERSION < v"0.7.0-DEV.3213"
     codeunits(x) = convert(Array{UInt8}, x)

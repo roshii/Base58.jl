@@ -1,10 +1,8 @@
 __precompile__()
 
 module Base58
-export base58encode, base58decode, base58checkencode, base58checkdecode,
-       alt_base58encode, alt_base58decode, alt_base58checkencode
-using BenchmarkTools
-import SHA: sha256
+export base58encode, base58decode, base58checkencode, base58checkdecode, alt
+using SHA: sha256
 
 include("alt_Base58.jl")
 
@@ -186,5 +184,47 @@ function base58checkdecode(x::T, check::Bool = true) where
 
     return payload
 end
+
+module alt
+
+export base58encode, base58decode, base58checkencode
+
+BASE58_ALPHABET = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+
+function base58encode(s::Union{Base.CodeUnits{UInt8,String},Array{UInt8,1}})
+    prefix = []
+    for c in s
+        if c == 0
+            push!(prefix, 0x31)
+        else
+            break
+        end
+    end
+    num = parse(BigInt, bytes2hex(s), base=16)
+    result = []
+    while num > 0
+        num, i = divrem(num, 58)
+        pushfirst!(result, BASE58_ALPHABET[i+1])
+    end
+    return AbstractArray{UInt8,1}(cat(prefix, result; dims=1))
+end
+
+function base58decode(a::AbstractArray{UInt8})
+    result = ""
+    i = 1
+    while i <= length(a)
+        result = string(result,Char(a[i]))
+        i += 1
+    end
+    return result
+end
+
+function base58checkencode(h160::Union{Base.CodeUnits{UInt8,String},Array{UInt8,1}})
+    checksum = sha256(sha256(h160))[1:4]
+    base58bytes = alt_base58encode(cat(h160, checksum; dims=1))
+    return alt_base58decode(base58bytes)
+end
+
+end  # alt module
 
 end # module Base58

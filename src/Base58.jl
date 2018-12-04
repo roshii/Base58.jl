@@ -4,8 +4,6 @@ module Base58
 export base58encode, base58decode, base58checkencode, base58checkdecode, alt
 using SHA: sha256
 
-include("alt_Base58.jl")
-
 if VERSION < v"0.7.0-DEV.3213"
     codeunits(x) = convert(Array{UInt8}, x)
 end
@@ -192,6 +190,9 @@ export base58encode, base58decode, base58checkencode
 BASE58_ALPHABET = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 
 function base58encode(s::Union{Base.CodeUnits{UInt8,String},Array{UInt8,1}})
+    if length(s) == 0
+        return s
+    end
     prefix = []
     for c in s
         if c == 0

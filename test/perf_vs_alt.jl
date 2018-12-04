@@ -3,49 +3,44 @@ using Revise
 using Base58
 using Base64
 
-test_data = hcat(
-    [b"",                b""],
-    [[0x00],             b"1"],
-    [[0x00, 0x00],       b"11"],
-    [b"hello world",     b"StV1DL6CwTryKyV"],
-    [b"\0\0hello world", b"11StV1DL6CwTryKyV"],
-    [nothing,            b"3vQOB7B6uFg4oH"],
-    [b""" !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~""",
-                         b"3WSNuyEGf19K7EdeCmokbtTAXJwJUdvg8QXxAacYC7kR1bQoYeWVr5iMUHvxvv4FCFY48dVUrX6BrFLod6zsEhHU9NciUXFM17h1qtveYD7ocbnXQyuY84An9nAvEjdt6H"]
-);
-#
-# println("Original implemetation")
-# println("decode")
-# @btime base58decode([b"   11111"..., test_data[2, 7]...]) |> String
-# @btime base58decode(b"     ")
-# println("encode")
-# @btime base58encode(test_data[1, 4]);
-# @btime base58encode(test_data[1, 7]);
-# @btime base58encode($(test_data[1, 7]));
-# println("decode")
-# @btime base58decode($(test_data[2, 7]));
-# println("encode")
-# # @btime base58encode($(test_data[1, 1]));
-# @btime base58encode($(test_data[1, 2]));
-# @btime base58encode($(test_data[1, 3]));
-# @btime base58encode($(test_data[1, 4]));
-# @btime base58encode($(test_data[1, 5]));
-# @btime base58encode($(test_data[1, 7]));
-#
-println("Alternative implemetation")
-println("decode")
-@btime alt.base58decode([b"   11111"..., test_data[2, 7]...]) |> String
-@btime alt.base58decode(b"     ")
-println("encode")
-@btime alt.base58encode(test_data[1, 4]);
-@btime alt.base58encode(test_data[1, 7]);
-@btime alt.base58encode($(test_data[1, 7]));
-println("decode")
-@btime alt.base58decode($(test_data[2, 7]));
-println("encode")
-# @btime alt.base58encode($(test_data[1, 1]));
-@btime alt.base58encode($(test_data[1, 2]));
-@btime alt.base58encode($(test_data[1, 3]));
-@btime alt.base58encode($(test_data[1, 4]));
-@btime alt.base58encode($(test_data[1, 5]));
-@btime alt.base58encode($(test_data[1, 7]));
+function int2bytes(x::Integer)
+    hex = string(x, base=16)
+    if mod(length(hex), 2) != 0
+        hex = string("0", hex)
+    end
+    return hex2bytes(hex)
+end
+
+for e ∈ [16,32,64,128,256,512,1024,2048,4096]
+
+    SAMPLE_SIZE = 32
+
+    encode_data = []
+    while length(encode_data) < SAMPLE_SIZE
+        push!(encode_data, int2bytes(rand(big.(1:big(2)^e))))
+    end
+
+    decode_data = []
+
+    i = 1
+    encode_avg = 0
+    while i < length(encode_data)
+        original = @elapsed base58encode(encode_data[i])
+        alternative = @elapsed Base58.alt.base58encode(encode_data[i])
+        push!(decode_data, alt.base58encode(encode_data[i]))
+        encode_avg += original - alternative
+        i += 1
+    end
+    println(length(encode_data[i]) * 8, " bits average encoding Δ: ", round(encode_avg / length(encode_data) * 10^6), " ns")
+
+    i = 1
+    decode_avg = 0
+    while i < length(decode_data)
+        original = @elapsed base58decode(decode_data[i])
+        alternative = @elapsed Base58.alt.base58decode(decode_data[i])
+        decode_avg += original - alternative
+        i += 1
+    end
+    println(length(encode_data[i]) * 8, " bits average decoding Δ: ", round(decode_avg / length(decode_data) * 10^6), " ns")
+
+end
